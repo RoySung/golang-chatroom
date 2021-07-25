@@ -1,4 +1,4 @@
-module golang-websocket
+module golang-chatroom
 
 go 1.16
 
