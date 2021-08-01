@@ -1,0 +1,71 @@
+image:
+  name: atlassian/default-image:2
+
+pipelines:
+  tags:
+    'v*':
+      - step:
+          size: 2x
+          name: 'Deploy Docker Image'
+          services:
+            - docker
+          script:
+            - docker build -t golang-chatroom .
+            - pipe: atlassian/aws-ecr-push-image:1.4.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                IMAGE_NAME: golang-chatroom
+                TAGS: '${BITBUCKET_TAG} latest'
+      - step:
+          size: 2x
+          name: 'Deploy Server To ECS'
+          deployment: production
+          script:
+            # Generate task-definition.json
+            - export IMAGE_URL="672241579543.dkr.ecr.ap-southeast-1.amazonaws.com/golang-chatroom"
+            - export IMAGE_NAME="${IMAGE_URL}:${BITBUCKET_TAG}"
+            - envsubst < task-definition-template.json >  task-definition.json
+
+            - pipe: atlassian/aws-ecs-deploy:1.5.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                CLUSTER_NAME: 'golang-chatroom-cluster'
+                SERVICE_NAME: 'golang-chatroom-service'
+                TASK_DEFINITION: 'task-definition.json'
+      # - step:
+      #     size: 2x
+      #     name: Deploy to ECS with blue/green
+      #     script:
+      #       ## Install the AWS CLI
+      #       - apt-get update && apt-get install -y jq
+      #       - curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+      #       - unzip awscli-bundle.zip
+      #       - ./awscli-bundle/install -b ~/bin/aws
+      #       - export PATH=~/bin:$PATH
+
+      #       ## Replace the container name in the task definition with the new image.
+      #       - export IMAGE_URL="672241579543.dkr.ecr.ap-southeast-1.amazonaws.com/golang-chatroom"
+      #       - export IMAGE_NAME="${IMAGE_URL}:${BITBUCKET_TAG}"
+      #       - envsubst < task-definition-template.json >  task-definition.json
+
+      #       ## Update the task definition and capture the latest revision.
+      #       - >
+      #         export UPDATED_TASK_DEFINITION=$(aws ecs register-task-definition --cli-input-json file://task-definition.json | \
+      #             jq '.taskDefinition.taskDefinitionArn' --raw-output)
+
+      #       ## Update the service
+      #       - echo $UPDATED_TASK_DEFINITION
+      #       - export CLUSTER_NAME="golang-chatroom-cluster"
+      #       - export SERVICE_NAME="golang-chatroom-services"
+      #       ## 1. Rolling deployment
+      #       - aws ecs update-service --service ${SERVICE_NAME} --cluster ${CLUSTER_NAME} --task-definition ${UPDATED_TASK_DEFINITION}
+      #       ## 2. Blue/Green deployment for CodeDeploy
+      #       # Generate create-deployment.json for create-deployment
+      #       # - export APP_NAME="AppECS-golang-chatroom-service"
+      #       # - export GROUP_NAME="DgpECS-golang-chatroom-service"
+      #       # - envsubst < create-deployment-template.json > create-deployment.json
+      #       # - aws deploy create-deployment --region ap-southeast-1 --cli-input-json file://create-deployment.json

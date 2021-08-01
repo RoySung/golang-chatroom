@@ -1,0 +1,10 @@
+{
+	"applicationName": "${APP_NAME}",
+	"deploymentGroupName": "${GROUP_NAME}",
+	"revision": {
+		"revisionType": "AppSpecContent",
+		"appSpecContent": {
+			"content": "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"${UPDATED_TASK_DEFINITION}\",\"LoadBalancerInfo\":{\"ContainerName\":\"golang-chatroom\",\"ContainerPort\":5000},\"PlatformVersion\":\"1.4.0\"}}}]}"
+		}
+	}
+}

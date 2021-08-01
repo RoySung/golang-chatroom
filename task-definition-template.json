@@ -1,0 +1,32 @@
+{
+	"executionRoleArn": "${ROLE_ARN}",
+	"containerDefinitions": [{
+		"logConfiguration": {
+			"logDriver": "awslogs",
+			"options": {
+				"awslogs-group": "/ecs/golang-chartroom",
+				"awslogs-region": "ap-southeast-1",
+				"awslogs-stream-prefix": "ecs"
+			}
+		},
+		"portMappings": [{
+			"hostPort": 5000,
+			"protocol": "tcp",
+			"containerPort": 5000
+		}],
+		"cpu": 0,
+		"environment": [],
+		"volumesFrom": [],
+		"image": "${IMAGE_NAME}",
+		"name": "server"
+	}],
+	"placementConstraints": [],
+	"memory": "512",
+	"family": "task-definition",
+	"requiresCompatibilities": [
+		"FARGATE"
+	],
+	"networkMode": "awsvpc",
+	"cpu": "256",
+	"volumes": []
+}
